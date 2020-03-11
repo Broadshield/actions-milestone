@@ -25,7 +25,8 @@ interface PullRequestWebhookPayload extends WebhookPayload {
 
 async function run() {
   const token = core.getInput('repo-token', { required: true });
-  const configPath = core.getInput('configuration-path', { required: true });
+  const configPath = core.getInput('configuration-path', { required: false });
+  const milestoneOverride = core.getInput('milestone', { required: false });
 
   const pullRequest = (github.context.payload as PullRequestWebhookPayload).pull_request;
   if (!pullRequest) {
@@ -40,22 +41,26 @@ async function run() {
     head: { ref: headBranch },
   } = pullRequest;
 
-  if (milestone) {
-    console.log('Milestone already exists, exiting');
+  if (!milestoneOverride && milestone) {
+    console.log(`Milestone already exists, exiting (milestone: ${milestone})`);
     return;
   }
 
   const client = new github.GitHub(token);
+  var addMilestone;
+  if (!milestoneOverride) {
+    const configObject = await config(client, configPath);
+    console.log('configObject base-branch', configObject.baseBranchList);
+    console.log('configObject head-branch', configObject.headBranchList);
 
-  const configObject = await config(client, configPath);
-  console.log('configObject base-branch', configObject.baseBranchList);
-  console.log('configObject head-branch', configObject.headBranchList);
+    addMilestone = match(baseBranch, headBranch, configObject);
 
-  const addMilestone = match(baseBranch, headBranch, configObject);
-
-  if (!addMilestone) {
-    console.log('Milestone not hit, exiting');
-    return;
+    if (!addMilestone) {
+      console.log('Milestone not hit, exiting');
+      return;
+    }
+  } else {
+    addMilestone = milestoneOverride;
   }
 
   const milestones = await client.issues.listMilestonesForRepo({

@@ -4,9 +4,14 @@ author: 'iyu'
 inputs:
   repo-token:
     description: 'The GITHUB_TOKEN secret'
+    required: true
   configuration-path:
     description: 'The path for the milestone configurations'
     default: '.github/milestone.yml'
+    required: false
+  milestone:
+    description: 'Override the milestone name: eg "v1.3"'
+    required: false
 outputs:
   milestone:
     description: 'The Added Milestone'
